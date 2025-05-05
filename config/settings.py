@@ -1,0 +1,2 @@
+SUPABASE_URL = "https://igtwulxvnbukoojlrbao.supabase.co"
+SUPABASE_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlndHd1bHh2bmJ1a29vamxyYmFvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDU5MTI2NSwiZXhwIjoyMDYwMTY3MjY1fQ.BEjxPUlvYa4ilWMVd5z9yxFjQy8T6r12IFMKgZo-fIw"
