@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
-"""Janela Principal do Quadro Branco Colaborativo (Redesenhada)."""
+"""Janela Principal do Quadro Branco Colaborativo."""
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLineEdit, QColorDialog, QLabel, QSizePolicy, QMessageBox,
-    QFrame, QSpacerItem
+    QFrame, QSpacerItem, QSpinBox
 )
-from PySide6.QtGui import QIcon, QFont # Adicionado QFont
-from PySide6.QtCore import Qt, QSize # Adicionado QSize
+from PySide6.QtGui import QIcon, QFont, QColor
+from PySide6.QtCore import Qt, QSize
 
 from client.ui.canvas_widget import CanvasWidget
-from client.services.session_manager import get_session_shapes
 from client.services.auth import logout, get_current_user
 
-# Cores do Design (aproximadas da imagem)
-COLOR_BACKGROUND = "#F3F4F6" # Um cinza bem claro, quase branco
-COLOR_PRIMARY = "#4F46E5" # Roxo/Azul principal
+# Cores do Design
+COLOR_BACKGROUND = "#F3F4F6"
+COLOR_PRIMARY = "#4F46E5"
 COLOR_PRIMARY_HOVER = "#6366F1"
-COLOR_DANGER = "#EF4444" # Vermelho para Limpar
+COLOR_DANGER = "#EF4444"
 COLOR_DANGER_HOVER = "#F87171"
 COLOR_SECONDARY_BUTTON = "#FFFFFF"
 COLOR_SECONDARY_BORDER = "#D1D5DB"
@@ -26,245 +25,204 @@ COLOR_TEXT_LIGHT = "#6B7280"
 COLOR_CARD_BACKGROUND = "#FFFFFF"
 
 class MainWindow(QMainWindow):
-    def __init__(self, user_id, session_id):
+    def __init__(self, user_id):
         super().__init__()
         self.user_id = user_id
-        self.session_id = session_id
-        self.setWindowTitle("Quadro Branco Colaborativo") # Título genérico
-        self.setMinimumSize(1000, 700)
-        # Estilo geral da janela
-        self.setStyleSheet(f"background-color: {COLOR_BACKGROUND}; font-family: Arial;")
-
-        # Container principal
-        main_container = QWidget()
-        main_layout = QVBoxLayout(main_container)
-        main_layout.setSpacing(15) # Espaçamento entre cards
-        main_layout.setContentsMargins(25, 25, 25, 25)
-
-        # --- Card Header --- 
-        header_card = QFrame()
-        header_card.setObjectName("HeaderCard")
-        header_card.setStyleSheet(f"""
-            #HeaderCard {{ 
-                background-color: {COLOR_CARD_BACKGROUND};
-                border-radius: 8px;
-                padding: 10px 20px;
+        self.setWindowTitle("Quadro Branco Colaborativo")
+        self.setMinimumSize(900, 650)
+        self.setStyleSheet(f"""
+            QMainWindow, QWidget {{
+                background-color: {COLOR_BACKGROUND};
             }}
         """)
-        header_layout = QHBoxLayout(header_card)
-        header_layout.setContentsMargins(0, 0, 0, 0)
 
-        title = QLabel("Quadro Branco Colaborativo")
-        title.setFont(QFont("Arial", 16, QFont.Bold))
-        title.setStyleSheet(f"color: {COLOR_PRIMARY};")
-        header_layout.addWidget(title)
-
-        header_layout.addStretch()
-
-        # Botão Colaborar (Placeholder)
-        self.collab_button = QPushButton(" Colaborar") # Ícone pode ser adicionado depois
-        # self.collab_button.setIcon(QIcon("path/to/collab_icon.png")) # Exemplo
-        self.collab_button.setStyleSheet(f"""
-            QPushButton {{ 
+        # Barra superior alinhada à direita, espaçamento adequado
+        top_info_bar = QWidget()
+        top_info_bar.setFixedHeight(50)
+        top_info_layout = QHBoxLayout(top_info_bar)
+        top_info_layout.setContentsMargins(0, 0, 24, 0)
+        top_info_layout.setSpacing(18)
+        top_info_layout.addStretch(1)
+        user = get_current_user()
+        email_label = QLabel(user.email if user and hasattr(user, 'email') else "Usuário")
+        email_label.setStyleSheet("font-size: 14px; color: #222; font-weight: 500;")
+        top_info_layout.addWidget(email_label)
+        people_label = QLabel("Pessoas na sessão: 5")
+        people_label.setStyleSheet("font-size: 14px; color: #6366F1; font-weight: 500; margin-left: 18px;")
+        top_info_layout.addWidget(people_label)
+        logout_button = QPushButton("Sair")
+        logout_button.setStyleSheet(f"""
+            QPushButton {{
                 background-color: {COLOR_SECONDARY_BUTTON};
                 color: {COLOR_TEXT_DARK};
-                border: 1px solid {COLOR_SECONDARY_BORDER};
-                padding: 8px 15px;
-                border-radius: 6px;
-                font-size: 13px;
+                border: 1.2px solid {COLOR_SECONDARY_BORDER};
+                border-radius: 7px;
+                padding: 4px 14px;
+                font-size: 14px;
+                font-weight: 500;
+                margin-left: 18px;
             }}
-            QPushButton:hover {{ background-color: #F9FAFB; }}
-        """)
-        # self.collab_button.clicked.connect(self.handle_collab) # Conectar função depois
-        header_layout.addWidget(self.collab_button)
-
-        # Botão Sair (Logout)
-        self.logout_button = QPushButton(" Sair") # Ícone pode ser adicionado depois
-        # self.logout_button.setIcon(QIcon("path/to/logout_icon.png")) # Exemplo
-        self.logout_button.setStyleSheet(f"""
-            QPushButton {{ 
-                background-color: {COLOR_SECONDARY_BUTTON};
-                color: {COLOR_TEXT_DARK};
-                border: 1px solid {COLOR_SECONDARY_BORDER};
-                padding: 8px 15px;
-                border-radius: 6px;
-                font-size: 13px;
-                margin-left: 10px; /* Espaço entre botões */
+            QPushButton:hover {{
+                background-color: #F0F7FF;
+                border-color: {COLOR_PRIMARY};
             }}
-            QPushButton:hover {{ background-color: #F9FAFB; }}
         """)
-        self.logout_button.clicked.connect(self.handle_logout)
-        header_layout.addWidget(self.logout_button)
+        logout_button.clicked.connect(self.handle_logout)
+        top_info_layout.addWidget(logout_button)
 
-        main_layout.addWidget(header_card)
+        # Layout principal
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
+        layout.setContentsMargins(30, 18, 30, 18)
+        layout.setSpacing(12)
+        layout.addWidget(top_info_bar)
 
-        # --- Card Toolbar --- 
-        toolbar_card = QFrame()
-        toolbar_card.setObjectName("ToolbarCard")
-        toolbar_card.setStyleSheet(f"""
-            #ToolbarCard {{ 
+        # Card da barra de ferramentas centralizado e compacto
+        top_bar = QFrame()
+        top_bar.setFixedHeight(100)
+        top_bar.setStyleSheet(f"""
+            QFrame {{
                 background-color: {COLOR_CARD_BACKGROUND};
-                border-radius: 8px;
-                padding: 15px;
+                border-radius: 18px;
+                padding: 14px 18px 10px 18px;
+                border: 1.5px solid #E5E7EB;
+                box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+                max-width: 2000px;
+                margin-left: auto;
+                margin-right: auto;
             }}
         """)
-        toolbar_layout = QHBoxLayout(toolbar_card)
-        toolbar_layout.setContentsMargins(0, 0, 0, 0)
-        toolbar_layout.setSpacing(10)
+        top_bar.setMaximumWidth(2000)
+        top_layout = QHBoxLayout(top_bar)
+        top_layout.setContentsMargins(8, 8, 8, 8)
+        top_layout.setSpacing(12)
 
+        # Botões de modo
         self.mode_buttons = {}
-        # Usando ícones Unicode simples por enquanto
-        shape_icons = {"square": "□", "circle": "○", "triangle": "△", "text": "T"}
-        for mode, icon in shape_icons.items():
-            btn = QPushButton(icon)
-            btn.setFixedSize(40, 40)
+        modes = {
+            "square": "Quadrado",
+            "circle": "Círculo",
+            "triangle": "Triângulo",
+            "text": "Texto"
+        }
+        for mode, label in modes.items():
+            btn = QPushButton(label)
+            btn.setMinimumWidth(110)
             btn.setCheckable(True)
-            btn.setFont(QFont("Arial", 14))
             btn.setStyleSheet(f"""
-                QPushButton {{ 
+                QPushButton {{
                     background-color: {COLOR_SECONDARY_BUTTON};
                     color: {COLOR_TEXT_DARK};
-                    border: 1px solid {COLOR_SECONDARY_BORDER};
-                    border-radius: 6px;
+                    border: 1.5px solid {COLOR_SECONDARY_BORDER};
+                    border-radius: 8px;
+                    padding: 10px 22px;
+                    font-size: 15px;
+                    font-weight: 500;
+                    transition: background 0.2s;
                 }}
-                QPushButton:checked {{ 
+                QPushButton:hover {{
+                    background-color: #F0F7FF;
+                    border-color: {COLOR_PRIMARY};
+                }}
+                QPushButton:checked {{
                     background-color: {COLOR_PRIMARY};
                     color: white;
-                    border: 1px solid {COLOR_PRIMARY};
-                }}
-                QPushButton:hover {{ 
                     border-color: {COLOR_PRIMARY};
                 }}
             """)
-            # Usar lambda para capturar o modo correto
-            btn.clicked.connect(lambda checked, m=mode: self.set_mode(m) if checked else None)
-            toolbar_layout.addWidget(btn)
+            btn.clicked.connect(lambda checked, m=mode: self.set_mode(m))
             self.mode_buttons[mode] = btn
+            top_layout.addWidget(btn)
 
-        toolbar_layout.addStretch(1) # Empurra o botão Limpar para a direita
+        # Área de cor com rótulo
+        color_label = QLabel("Cor:")
+        color_label.setStyleSheet("font-size: 15px; color: #222; font-weight: 500; margin-left: 8px;")
+        top_layout.addWidget(color_label)
+        self.color_button = QPushButton()
+        self.color_button.setFixedSize(40, 40)
+        self.color_button.setStyleSheet(f"background-color: #000000; border: 1.5px solid {COLOR_SECONDARY_BORDER}; border-radius: 8px;")
+        self.color_button.clicked.connect(self.choose_color)
+        top_layout.addWidget(self.color_button)
 
-        # Botão Limpar
-        clear_btn = QPushButton(" Limpar") # Ícone pode ser adicionado
-        # clear_btn.setIcon(QIcon("path/to/trash_icon.png"))
-        clear_btn.setFixedHeight(40)
-        clear_btn.setStyleSheet(f"""
-            QPushButton {{ 
-                background-color: {COLOR_DANGER};
-                color: white;
-                border: none;
-                padding: 0px 20px;
-                border-radius: 6px;
-                font-size: 13px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{ background-color: {COLOR_DANGER_HOVER}; }}
-        """)
-        clear_btn.clicked.connect(self.confirm_clear_canvas)
-        toolbar_layout.addWidget(clear_btn)
-
-        main_layout.addWidget(toolbar_card)
-
-        # --- Card Controles (Cor, Texto) --- 
-        controls_card = QFrame()
-        controls_card.setObjectName("ControlsCard")
-        controls_card.setStyleSheet(f"""
-            #ControlsCard {{ 
-                background-color: {COLOR_CARD_BACKGROUND};
+        # Input de texto
+        self.text_input = QLineEdit()
+        self.text_input.setPlaceholderText("Digite o texto...")
+        self.text_input.setStyleSheet(f"""
+            QLineEdit {{
+                padding: 10px;
+                border: 1.5px solid {COLOR_SECONDARY_BORDER};
                 border-radius: 8px;
-                padding: 15px;
-            }}
-            QLabel {{ color: {COLOR_TEXT_DARK}; font-size: 13px; }}
-            QLineEdit {{ 
-                border: 1px solid {COLOR_SECONDARY_BORDER};
-                border-radius: 6px;
-                padding: 5px 10px;
-                background-color: white;
+                font-size: 15px;
+                background: #fff;
                 color: {COLOR_TEXT_DARK};
             }}
-        """)
-        controls_layout = QHBoxLayout(controls_card)
-        controls_layout.setContentsMargins(0, 0, 0, 0)
-        controls_layout.setSpacing(15)
-        controls_layout.setAlignment(Qt.AlignLeft) # Alinha itens à esquerda
-
-        # Botão de Excluir (Placeholder - funcionalidade não implementada)
-        delete_shape_btn = QPushButton("") # Ícone Lixeira
-        # delete_shape_btn.setIcon(QIcon("path/to/small_trash_icon.png"))
-        delete_shape_btn.setFixedSize(32, 32)
-        delete_shape_btn.setStyleSheet(f"""
-            QPushButton {{ 
-                background-color: {COLOR_SECONDARY_BUTTON};
-                border: 1px solid {COLOR_SECONDARY_BORDER};
-                border-radius: 6px;
+            QLineEdit:focus {{
+                border: 1.5px solid {COLOR_PRIMARY};
+                background: #F0F7FF;
             }}
-             QPushButton:hover {{ background-color: #F9FAFB; }}
         """)
-        # delete_shape_btn.clicked.connect(self.delete_selected_shape) # Conectar depois
-        controls_layout.addWidget(delete_shape_btn)
-
-        controls_layout.addWidget(QLabel("Cor:"))
-        self.color_button = QPushButton()
-        self.color_button.setFixedSize(30, 30)
-        # Cor inicial preta
-        self.color_button.setStyleSheet(f"background-color: black; border: 1px solid {COLOR_SECONDARY_BORDER}; border-radius: 4px;")
-        self.color_button.clicked.connect(self.choose_color)
-        controls_layout.addWidget(self.color_button)
-
-        controls_layout.addWidget(QLabel("Texto:"))
-        self.text_input = QLineEdit("texto")
-        self.text_input.setFixedWidth(250)
         self.text_input.textChanged.connect(self.update_canvas_text)
-        controls_layout.addWidget(self.text_input)
+        top_layout.addWidget(self.text_input)
 
-        # Adicionar controle de tamanho da fonte (opcional, mas na tabela shapes)
-        controls_layout.addWidget(QLabel("Tam. Fonte:"))
-        self.font_size_input = QLineEdit("14")
-        self.font_size_input.setFixedWidth(50)
-        self.font_size_input.textChanged.connect(self.update_canvas_font_size)
-        controls_layout.addWidget(self.font_size_input)
-
-        controls_layout.addStretch() # Empurra tudo para a esquerda
-
-        main_layout.addWidget(controls_card)
-
-        # --- Card Canvas --- 
-        canvas_card = QFrame()
-        canvas_card.setObjectName("CanvasCard")
-        # Define uma política de expansão vertical
-        canvas_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        canvas_card.setStyleSheet(f"""
-            #CanvasCard {{ 
-                background-color: {COLOR_CARD_BACKGROUND};
+        # Botão de limpar
+        clear_button = QPushButton("Limpar")
+        clear_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: #F87171;
+                color: white;
+                border: none;
                 border-radius: 8px;
-                padding: 1px; /* Pequena borda interna */
+                padding: 10px 22px;
+                font-size: 15px;
+                font-weight: bold;
+                margin-left: 8px;
+            }}
+            QPushButton:hover {{
+                background-color: #EF4444;
             }}
         """)
-        canvas_layout = QVBoxLayout(canvas_card)
-        canvas_layout.setContentsMargins(10, 10, 10, 10) # Padding interno para o canvas
+        clear_button.clicked.connect(self.confirm_clear_canvas)
+        top_layout.addWidget(clear_button)
 
-        self.canvas = CanvasWidget(user_id=self.user_id, session_id=self.session_id)
-        # Canvas deve expandir para preencher o card
-        self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.canvas.setStyleSheet(f"background-color: white; border-radius: 6px;") # Estilo do canvas interno
-        canvas_layout.addWidget(self.canvas)
+        # Botão de excluir forma selecionada
+        delete_button = QPushButton("Excluir")
+        delete_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: #F3F4F6;
+                color: #BDBDBD;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 22px;
+                font-size: 15px;
+                font-weight: bold;
+                margin-left: 8px;
+            }}
+            QPushButton:enabled {{
+                background-color: #FBBF24;
+                color: #222;
+            }}
+            QPushButton:hover:enabled {{
+                background-color: #F59E42;
+            }}
+        """)
+        delete_button.clicked.connect(self.delete_selected_shape)
+        top_layout.addWidget(delete_button)
+        self.delete_button = delete_button
 
-        main_layout.addWidget(canvas_card)
+        layout.addWidget(top_bar, alignment=Qt.AlignHCenter)
 
-        # --- Mensagem Flutuante (Placeholder) --- 
-        # Implementar isso corretamente exigiria um widget sobreposto ou status bar
-        # Por ora, apenas um QLabel no final
-        # status_label = QLabel("Quadro branco pronto! Selecione uma forma para começar a desenhar.")
-        # status_label.setStyleSheet(f"background-color: {COLOR_CARD_BACKGROUND}; color: {COLOR_TEXT_DARK}; border-radius: 6px; padding: 8px 12px; border: 1px solid {COLOR_SECONDARY_BORDER};")
-        # status_label.setAlignment(Qt.AlignCenter)
-        # main_layout.addWidget(status_label, 0, Qt.AlignBottom | Qt.AlignRight)
-        # main_layout.addStretch() # Para empurrar para baixo? Testar.
+        # Canvas
+        self.canvas = CanvasWidget(user_id=self.user_id)
+        self.canvas.setStyleSheet(f"background-color: #fff; border-radius: 16px; border: 1.5px solid #E5E7EB;")
+        layout.addWidget(self.canvas)
 
-        self.setCentralWidget(main_container)
-        self.set_mode("square")  # modo inicial
-        self.load_initial_shapes() # Carrega formas existentes
+        # Configuração inicial
+        self.set_mode("square")
+        self.update_delete_button_state()
+        self.canvas.mousePressEvent = self.wrap_mouse_press(self.canvas.mousePressEvent)
 
     def set_mode(self, mode):
-        # Garante que apenas um botão de modo esteja checado
         for m, btn in self.mode_buttons.items():
             if m != mode:
                 btn.setChecked(False)
@@ -272,54 +230,97 @@ class MainWindow(QMainWindow):
         print(f"Modo alterado para: {mode}")
 
     def choose_color(self):
-        # Usa a cor atual do canvas como cor inicial do diálogo
-        initial_color = QColor(self.canvas.current_color)
-        color = QColorDialog.getColor(initial_color, self)
-        if color.isValid():
-            color_name = color.name()
-            self.canvas.set_color(color_name)
-            self.color_button.setStyleSheet(f"background-color: {color_name}; border: 1px solid {COLOR_SECONDARY_BORDER}; border-radius: 4px;")
-            print(f"Cor alterada para: {color_name}")
+        dialog = QColorDialog(self)
+        dialog.setOption(QColorDialog.DontUseNativeDialog, True)  # Força modo não nativo
+        dialog.setCurrentColor(QColor(self.canvas.current_color))
+        dialog.setStyleSheet("""
+            QWidget {
+                background-color: #fff;
+                color: #222;
+                font-size: 15px;
+            }
+            QLabel, QLineEdit {
+                color: #222;
+            }
+            QPushButton {
+                color: #222;
+                background-color: #F3F4F6;
+                border-radius: 6px;
+                padding: 6px 16px;
+            }
+            QPushButton:disabled {
+                color: #aaa;
+            }
+        """)
+        if dialog.exec() == QColorDialog.Accepted:
+            color = dialog.selectedColor()
+            if color.isValid():
+                color_name = color.name()
+                self.canvas.set_color(color_name)
+                self.color_button.setStyleSheet(f"background-color: {color_name}; border: 1.5px solid {COLOR_SECONDARY_BORDER}; border-radius: 8px;")
+                print(f"Cor alterada para: {color_name}")
 
     def update_canvas_text(self):
         self.canvas.set_text(self.text_input.text())
 
-    def update_canvas_font_size(self):
-        self.canvas.set_font_size(self.font_size_input.text())
-
-    def load_initial_shapes(self):
-        print(f"Carregando formas para a sessão {self.session_id}...")
-        shapes_data = get_session_shapes(self.session_id)
-        if shapes_data:
-            self.canvas.load_shapes(shapes_data)
-            print(f"{len(shapes_data)} formas carregadas.")
-        else:
-            # Não mostra erro se apenas não houver formas
-            print("Nenhuma forma encontrada para esta sessão.")
-
     def confirm_clear_canvas(self):
-        reply = QMessageBox.question(self, "Confirmar Limpeza",
-                                     "Tem certeza que deseja limpar todo o canvas? Esta ação (ainda) não pode ser desfeita no banco de dados.",
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        reply = show_messagebox(self, QMessageBox.Question, "Confirmar Limpeza",
+                               "Tem certeza que deseja limpar todo o canvas?",
+                               QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.canvas.clear_canvas()
 
     def handle_logout(self):
-        if logout():
-            print("Logout realizado. Fechando aplicação.")
-            self.close()
-            # Para voltar à tela de login, precisaríamos de uma lógica diferente
-            # no run.py ou em um gerenciador de janelas.
-        else:
-            QMessageBox.warning(self, "Erro de Logout", "Não foi possível deslogar.")
-
-    # def handle_collab(self):
-    #     # Lógica para o botão Colaborar (ex: mostrar lista de usuários, convidar)
-    #     print("Botão Colaborar clicado - funcionalidade a implementar.")
-    #     QMessageBox.information(self, "Colaborar", "Funcionalidade de colaboração ainda não implementada.")
-
-    def closeEvent(self, event):
-        if get_current_user():
+        reply = show_messagebox(self, QMessageBox.Question, "Confirmar Saída",
+                               "Tem certeza que deseja sair?",
+                               QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
             logout()
-        event.accept()
+            self.close()
+
+    def delete_selected_shape(self):
+        if self.canvas.selected_shape_index is not None:
+            self.canvas.delete_selected_shape()
+            self.update_delete_button_state()
+
+    def update_delete_button_state(self):
+        enabled = self.canvas.selected_shape_index is not None
+        self.delete_button.setEnabled(enabled)
+
+    def wrap_mouse_press(self, original_mouse_press):
+        def new_mouse_press(event):
+            original_mouse_press(event)
+            self.update_delete_button_state()
+        return new_mouse_press
+
+# Função utilitária para QMessageBox estilizado
+
+def show_messagebox(parent, icon, title, text, buttons=QMessageBox.Ok):
+    msg = QMessageBox(parent)
+    msg.setIcon(icon)
+    msg.setWindowTitle(title)
+    msg.setText(text)
+    msg.setStandardButtons(buttons)
+    msg.setStyleSheet('''
+        QMessageBox {
+            background-color: #F3F4F6;
+            color: #222;
+            font-size: 15px;
+        }
+        QLabel {
+            color: #222;
+            font-size: 15px;
+        }
+        QPushButton {
+            background-color: #6366F1;
+            color: white;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 14px;
+        }
+        QPushButton:hover {
+            background-color: #4F46E5;
+        }
+    ''')
+    return msg.exec()
 
