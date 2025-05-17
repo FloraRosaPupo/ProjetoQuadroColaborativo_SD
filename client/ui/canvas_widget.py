@@ -37,7 +37,7 @@ class CanvasWidget(QWidget):
             print("⚠ Erro ao registrar sessão:", e)
             
         self.timer = QTimer()
-        self.timer.timeout.connect(self.carregar_formas_do_supabase())
+        self.timer.timeout.connect(self.carregar_formas_do_supabase)
         self.timer.start(3000)
         
 
