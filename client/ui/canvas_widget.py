@@ -4,14 +4,16 @@
 from PySide6.QtWidgets import QWidget, QMessageBox
 from PySide6.QtGui import QPainter, QPen, QColor, QFont, QPolygonF
 from PySide6.QtCore import Qt, QPointF, QRectF
+from client.services.supabase_client import get_supabase_client
+import uuid
 
 class CanvasWidget(QWidget):
     HANDLE_SIZE = 10
 
     def __init__(self, user_id=None, session_id=None):
         super().__init__()
-        self.user_id = user_id
-        self.session_id = session_id
+        self.user_id = user_id or str(uuid.uuid4())
+        self.session_id = session_id or str(uuid.uuid4())
         self.shapes = []
         self.drawing_mode = "square"
         self.current_color = "#000000"
@@ -23,6 +25,16 @@ class CanvasWidget(QWidget):
         self.resizing = False
         self.resizing_handle = None
         self.setStyleSheet("background-color: white; border-radius: 12px; padding: 8px;")
+
+        supabase = get_supabase_client()
+        try:
+            supabase.table("whiteboard_sessions").insert({
+                "id": self.session_id,
+                "name": "Sessão automática via PySide"
+            }).execute()
+            print("✅ Sessão registrada no Supabase.")
+        except Exception as e:
+            print("⚠ Erro ao registrar sessão:", e)
 
     def mousePressEvent(self, event):
         x, y = event.position().x(), event.position().y()
@@ -99,10 +111,16 @@ class CanvasWidget(QWidget):
             self.shapes[self.selected_shape_index]["y"] = y - dy
             self.update()
 
+    '''def mouseReleaseEvent(self, event):
+        self.drag_offset = None
+        self.resizing = False
+        self.resizing_handle = None'''
+    
     def mouseReleaseEvent(self, event):
         self.drag_offset = None
         self.resizing = False
         self.resizing_handle = None
+        self.salvar_formas_no_supabase()
 
     def get_shape_at_pos(self, x, y):
         for i in range(len(self.shapes)-1, -1, -1):
@@ -242,4 +260,33 @@ class CanvasWidget(QWidget):
             shape["width"] = value
             shape["height"] = value
             self.update()
+
+    def salvar_formas_no_supabase(self):
+
+        supabase = get_supabase_client()
+        if not self.shapes:
+            return
+        for shape in self.shapes:
+            dados = {
+                "session_id": self.session_id,
+                "user_id": self.user_id,
+                "type": shape.get("type"),
+                "x": shape.get("x"),
+                "y": shape.get("y"),
+                "width": shape.get("width"),
+                "height": shape.get("height"),
+                "color": shape.get("color"),
+                "text": shape.get("text"),
+                "font_size": shape.get("font_size"),
+            }
+            try:
+                resposta = supabase.table("whiteboard_shapes").insert(dados).execute()
+                print("✅ Forma salva:", resposta.data)
+            except Exception as e:
+                print("❌ Erro ao salvar no Supabase:", e)
+
+
+
+
+    
 

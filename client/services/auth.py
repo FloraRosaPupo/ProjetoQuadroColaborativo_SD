@@ -68,4 +68,3 @@ def logout():
     except Exception as e:
         print(f"Erro durante o logout Supabase: {e}")
         return False
-
