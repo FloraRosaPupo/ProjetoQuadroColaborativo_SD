@@ -36,6 +36,8 @@ class CanvasWidget(QWidget):
         except Exception as e:
             print("⚠ Erro ao registrar sessão:", e)
 
+        self.carregar_formas_do_supabase()
+
     def mousePressEvent(self, event):
         x, y = event.position().x(), event.position().y()
         if self.selected_shape_index is not None:
@@ -262,7 +264,6 @@ class CanvasWidget(QWidget):
             self.update()
 
     def salvar_formas_no_supabase(self):
-
         supabase = get_supabase_client()
         if not self.shapes:
             return
@@ -285,7 +286,18 @@ class CanvasWidget(QWidget):
             except Exception as e:
                 print("❌ Erro ao salvar no Supabase:", e)
 
-
+    def carregar_formas_do_supabase(self):
+        supabase = get_supabase_client()
+        try:
+            resposta = supabase.table("whiteboard_shapes").select("*").eq("session_id", self.session_id).execute()
+            if resposta and hasattr(resposta, "data") and isinstance(resposta.data, list):
+                self.shapes = resposta.data
+                self.update()
+                print(f"✅ {len(self.shapes)} formas carregadas do Supabase.")
+            else:
+                print("⚠ Nenhuma forma encontrada.")
+        except Exception as e:
+            print("❌ Erro ao carregar formas:", e)
 
 
     
