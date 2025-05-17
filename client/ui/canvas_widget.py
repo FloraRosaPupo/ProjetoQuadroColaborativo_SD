@@ -3,7 +3,7 @@
 
 from PySide6.QtWidgets import QWidget, QMessageBox
 from PySide6.QtGui import QPainter, QPen, QColor, QFont, QPolygonF
-from PySide6.QtCore import Qt, QPointF, QRectF
+from PySide6.QtCore import Qt, QPointF, QRectF, QTimer
 from client.services.supabase_client import get_supabase_client
 import uuid
 
@@ -35,8 +35,10 @@ class CanvasWidget(QWidget):
             print("✅ Sessão registrada no Supabase.")
         except Exception as e:
             print("⚠ Erro ao registrar sessão:", e)
-
-        self.carregar_formas_do_supabase()
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.carregar_formas_do_supabase())
+        self.timer.start(3000)
+        
 
     def mousePressEvent(self, event):
         x, y = event.position().x(), event.position().y()
