@@ -277,6 +277,20 @@ class MainWindow(QMainWindow):
         if reply == QMessageBox.Yes:
             logout()
             self.close()
+            # Para voltar à tela de login, precisaríamos de uma lógica diferente
+            # no run.py ou em um gerenciador de janelas.
+        else:
+            QMessageBox.warning(self, "Erro de Logout", "Não foi possível deslogar.")
+
+    # def handle_collab(self):
+    #     # Lógica para o botão Colaborar (ex: mostrar lista de usuários, convidar)
+    #     print("Botão Colaborar clicado - funcionalidade a implementar.")
+    #     QMessageBox.information(self, "Colaborar", "Funcionalidade de colaboração ainda não implementada.")
+
+    def closeEvent(self, event):
+        if get_current_user():
+            logout()
+        event.accept()
 
     def delete_selected_shape(self):
         if self.canvas.selected_shape_index is not None:
