@@ -11,6 +11,7 @@ from PySide6.QtCore import Qt, QSize
 
 from client.ui.canvas_widget import CanvasWidget
 from client.services.auth import logout, get_current_user
+from client.services.supabase_client import get_supabase_client
 
 # Cores do Design
 COLOR_BACKGROUND = "#F3F4F6"
@@ -271,10 +272,21 @@ class MainWindow(QMainWindow):
             self.canvas.clear_canvas()
 
     def handle_logout(self):
+        supabase = get_supabase_client()
         reply = show_messagebox(self, QMessageBox.Question, "Confirmar Saída",
                                "Tem certeza que deseja sair?",
                                QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
+            try:
+                # Deleta todas as formas dessa sessão
+                supabase.table("whiteboard_shapes").delete().eq("session_id", self.canvas.session_id).execute()
+
+                # Opcional: também remove o registro da sessão
+                supabase.table("whiteboard_sessions").delete().eq("id", self.canvas.session_id).execute()
+
+                print("✅ Dados apagados do Supabase.")
+            except Exception as e:
+                print("❌ Erro ao deletar dados:", e)
             logout()
             self.close()
             # Para voltar à tela de login, precisaríamos de uma lógica diferente
