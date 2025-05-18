@@ -30,7 +30,7 @@ class CanvasWidget(QWidget):
         QTimer.singleShot(1, self.session_client)    
         self.timer = QTimer()
         self.timer.timeout.connect(self.carregar_formas_do_supabase)
-        self.timer.start(3000)
+        self.timer.start(1)
         
     def session_client(self):
         supabase = get_supabase_client()
