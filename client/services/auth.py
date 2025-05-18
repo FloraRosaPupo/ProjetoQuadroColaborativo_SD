@@ -59,8 +59,14 @@ def get_current_user():
 def logout():
     """Desloga o usuário atual."""
     global current_user
+    current_user = get_current_user()
     try:
         supabase = get_supabase_client()
+         # Deleta todas as formas dessa sessão
+        supabase.table("whiteboard_shapes").delete().eq("session_id", current_user.id).execute()
+        print("✅ Dados apagados do Supabase.")
+        # Opcional: também remove o registro da sessão
+        supabase.table("whiteboard_sessions").delete().eq("id", current_user.id).execute()
         supabase.auth.sign_out()
         current_user = None
         print("Usuário deslogado com sucesso.")

@@ -294,15 +294,19 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.warning(self, "Erro de Logout", "Não foi possível deslogar.")
 
+
     # def handle_collab(self):
     #     # Lógica para o botão Colaborar (ex: mostrar lista de usuários, convidar)
     #     print("Botão Colaborar clicado - funcionalidade a implementar.")
     #     QMessageBox.information(self, "Colaborar", "Funcionalidade de colaboração ainda não implementada.")
 
     def closeEvent(self, event):
-        if get_current_user():
-            logout()
-        event.accept()
+        # Aqui você pode chamar métodos de limpeza, como limpar formas ou deletar do Supabase
+        supabase = get_supabase_client()
+        if hasattr(self, "canvas") and self.canvas:
+            self.canvas.limpar_dados()
+        supabase.table("whiteboard_sessions").delete().eq("id", self.canvas.session_id).execute()
+        event.accept()  # Aceita o fechamento da janela
 
     def delete_selected_shape(self):
         if self.canvas.selected_shape_index is not None:
