@@ -9,9 +9,10 @@ WS_URL = "wss://whiteboard-core-oxk7.onrender.com"
 
 def send_data(ws):
     supabase = get_supabase_client()
-    resposta = supabase.table("whiteboard_sessions").select("*", count="exact").execute()
-    userCount = resposta.count
+    
     while True:
+        resposta = supabase.table("whiteboard_sessions").select("*", count="exact").execute()
+        userCount = resposta.count
         data = {
             "serverId": "main-server-x",
             "name": "Servidor Grupo 11",
