@@ -218,7 +218,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.canvas)
 
         # Configuração inicial
-        self.set_mode("square")
+        # self.set_mode("square")
         self.update_delete_button_state()
         self.canvas.mousePressEvent = self.wrap_mouse_press(self.canvas.mousePressEvent)
 
