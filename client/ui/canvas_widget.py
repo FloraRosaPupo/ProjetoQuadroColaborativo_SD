@@ -3,15 +3,18 @@
 
 from PySide6.QtWidgets import QWidget, QMessageBox
 from PySide6.QtGui import QPainter, QPen, QColor, QFont, QPolygonF
-from PySide6.QtCore import Qt, QPointF, QRectF
+from PySide6.QtCore import Qt, QPointF, QRectF, QTimer
+from client.services.supabase_client import get_supabase_client
+from client.services.auth import logout, get_current_user
+import uuid
 
 class CanvasWidget(QWidget):
     HANDLE_SIZE = 10
 
     def __init__(self, user_id=None, session_id=None):
         super().__init__()
-        self.user_id = user_id
-        self.session_id = session_id
+        self.user_id = user_id or str(uuid.uuid4())
+        self.session_id = session_id or str(uuid.uuid4())
         self.shapes = []
         self.drawing_mode = "square"
         self.current_color = "#000000"
@@ -24,8 +27,6 @@ class CanvasWidget(QWidget):
         self.resizing_handle = None
         self.setStyleSheet("background-color: white; border-radius: 12px; padding: 8px;")
 
-<<<<<<< Updated upstream
-=======
         QTimer.singleShot(1, self.session_client)    
         self.timer = QTimer()
         self.timer.timeout.connect(self.carregar_formas_do_supabase)
@@ -46,7 +47,7 @@ class CanvasWidget(QWidget):
         # Exemplo: apagar as formas dessa sessão do Supabase
         supabase = get_supabase_client()
         try:
-            supabase.table("whiteboard_shapes").delete().match({
+            resposta = supabase.table("whiteboard_shapes").delete().match({
                 "session_id": self.session_id,
                 "user_id": self.user_id
             }).execute()
@@ -62,7 +63,6 @@ class CanvasWidget(QWidget):
         except Exception as e:
             print("❌ Erro ao limpar dados no Supabase:", e)
     
->>>>>>> Stashed changes
     def mousePressEvent(self, event):
         supabase = get_supabase_client()
         x, y = event.position().x(), event.position().y()
@@ -99,6 +99,7 @@ class CanvasWidget(QWidget):
             }
             self.shapes.append(shape_data)
             self.update()
+        
 
     def mouseMoveEvent(self, event):
         supabase = get_supabase_client()
@@ -148,9 +149,13 @@ class CanvasWidget(QWidget):
             print("✅ Forma atualizada:", resposta.data)
             self.update()
 
+
+    '''def mouseReleaseEvent(self, event):
+        self.drag_offset = None
+        self.resizing = False
+        self.resizing_handle = None'''
+    
     def mouseReleaseEvent(self, event):
-<<<<<<< Updated upstream
-=======
         supabase = get_supabase_client()
         if self.drag_offset is None and self.resizing_handle is None:
             self.salvar_formas_no_supabase()
@@ -163,10 +168,11 @@ class CanvasWidget(QWidget):
             print("Shape: ", id)
             resposta = supabase.table("whiteboard_shapes").update({"x": x, "y": y, "width": width, "height": height, "clicked": False}).eq("id", id).execute()
             print("✅ Forma atualizada:", resposta.data)
->>>>>>> Stashed changes
         self.drag_offset = None
         self.resizing = False
         self.resizing_handle = None
+        
+
 
     def get_shape_at_pos(self, x, y):
         for i in range(len(self.shapes)-1, -1, -1):
@@ -274,7 +280,9 @@ class CanvasWidget(QWidget):
             self.current_font_size = 14
 
     def clear_canvas(self):
+        supabase = get_supabase_client()
         self.shapes.clear()
+        resposta = supabase.table("whiteboard_shapes").delete().neq("type", " ").execute()
         self.selected_shape_index = None
         self.update()
 
@@ -288,7 +296,12 @@ class CanvasWidget(QWidget):
             self.update()
 
     def delete_selected_shape(self):
-        if self.selected_shape_index is not None:
+        supabase = get_supabase_client()
+        id = self.shapes[self.selected_shape_index]["id"]
+        print(self.shapes[self.selected_shape_index])
+        if self.selected_shape_index is not None: 
+            resposta = supabase.table("whiteboard_shapes").delete().eq("id", id).execute()
+            print(resposta)           
             del self.shapes[self.selected_shape_index]
             self.selected_shape_index = None
             self.update()
@@ -307,8 +320,6 @@ class CanvasWidget(QWidget):
             shape["height"] = value
             self.update()
 
-<<<<<<< Updated upstream
-=======
     def salvar_formas_no_supabase(self):
         supabase = get_supabase_client()
         if not self.shapes:
@@ -333,6 +344,7 @@ class CanvasWidget(QWidget):
         except Exception as e:
             print("❌ Erro ao salvar no Supabase:", e)
 
+
     def carregar_formas_do_supabase(self):
         supabase = get_supabase_client()
         try:
@@ -347,8 +359,3 @@ class CanvasWidget(QWidget):
             print("❌ Erro ao carregar formas:", e)
 
     
-    
-    def atualizar_formas_do_supabase(self):
-        
-        return
->>>>>>> Stashed changes
