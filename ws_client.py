@@ -9,7 +9,6 @@ WS_URL = "wss://whiteboard-core-oxk7.onrender.com"
 
 def send_data(ws):
     supabase = get_supabase_client()
-    
     while True:
         resposta = supabase.table("whiteboard_sessions").select("*", count="exact").execute()
         userCount = resposta.count
