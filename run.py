@@ -2,13 +2,13 @@ from client.ui.login_screen import LoginScreen
 from PySide6.QtWidgets import QApplication
 import sys
 
-if __name__ == "__main__":
-<<<<<<< Updated upstream
-=======
-    start_ws_client() # 👈 e chama aqui antes de abrir a interface
+from ws_client import start_ws_client  # 👈 adiciona essa linha aqui
 
->>>>>>> Stashed changes
+if __name__ == "__main__":
+    start_ws_client()  # 👈 e chama aqui antes de abrir a interface
+
     app = QApplication(sys.argv)
-    login = LoginScreen()  # ✅ Corrigido aqui
+    login = LoginScreen()
     login.show()
     sys.exit(app.exec())
+
