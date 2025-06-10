@@ -7,10 +7,11 @@ from PySide6.QtWidgets import (
     QFrame, QSpacerItem, QSpinBox
 )
 from PySide6.QtGui import QIcon, QFont, QColor
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QTimer
 
 from client.ui.canvas_widget import CanvasWidget
 from client.services.auth import logout, get_current_user
+from client.services.supabase_client import get_supabase_client
 
 # Cores do Design
 COLOR_BACKGROUND = "#F3F4F6"
@@ -25,9 +26,11 @@ COLOR_TEXT_LIGHT = "#6B7280"
 COLOR_CARD_BACKGROUND = "#FFFFFF"
 
 class MainWindow(QMainWindow):
-    def __init__(self, user_id):
+    def __init__(self, user_id, email):
         super().__init__()
+        self.people = 0
         self.user_id = user_id
+        self.email = email
         self.setWindowTitle("Quadro Branco Colaborativo")
         self.setMinimumSize(900, 650)
         self.setStyleSheet(f"""
@@ -47,9 +50,12 @@ class MainWindow(QMainWindow):
         email_label = QLabel(user.email if user and hasattr(user, 'email') else "Usuário")
         email_label.setStyleSheet("font-size: 14px; color: #222; font-weight: 500;")
         top_info_layout.addWidget(email_label)
-        people_label = QLabel("Pessoas na sessão: 5")
-        people_label.setStyleSheet("font-size: 14px; color: #6366F1; font-weight: 500; margin-left: 18px;")
-        top_info_layout.addWidget(people_label)
+        self.people_label = QLabel("Pessoas na sessão: " + str(self.people))
+        self.people_label.setStyleSheet("font-size: 14px; color: #6366F1; font-weight: 500; margin-left: 18px;")
+        top_info_layout.addWidget(self.people_label)
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.people_session)
+        self.timer.start(1)
         logout_button = QPushButton("Sair")
         logout_button.setStyleSheet(f"""
             QPushButton {{
@@ -213,14 +219,20 @@ class MainWindow(QMainWindow):
         layout.addWidget(top_bar, alignment=Qt.AlignHCenter)
 
         # Canvas
-        self.canvas = CanvasWidget(user_id=self.user_id)
+        self.canvas = CanvasWidget(user_id=self.user_id, session_id=self.email)
         self.canvas.setStyleSheet(f"background-color: #fff; border-radius: 16px; border: 1.5px solid #E5E7EB;")
         layout.addWidget(self.canvas)
 
         # Configuração inicial
-        # self.set_mode("square")
+        self.set_mode("square")
         self.update_delete_button_state()
         self.canvas.mousePressEvent = self.wrap_mouse_press(self.canvas.mousePressEvent)
+
+    def people_session(self):
+        supabase = get_supabase_client()
+        resposta = supabase.table("whiteboard_sessions").select("*", count="exact").execute()
+        self.people = resposta.count
+        self.people_label.setText("Pessoas na sessão: " + str(self.people))
 
     def set_mode(self, mode):
         for m, btn in self.mode_buttons.items():
@@ -271,12 +283,41 @@ class MainWindow(QMainWindow):
             self.canvas.clear_canvas()
 
     def handle_logout(self):
+        supabase = get_supabase_client()
         reply = show_messagebox(self, QMessageBox.Question, "Confirmar Saída",
                                "Tem certeza que deseja sair?",
                                QMessageBox.Yes | QMessageBox.No)
         if reply == QMessageBox.Yes:
+            try:
+                # Deleta todas as formas dessa sessão
+                supabase.table("whiteboard_shapes").delete().eq("session_id", self.canvas.session_id).execute()
+
+                # Opcional: também remove o registro da sessão
+                supabase.table("whiteboard_sessions").delete().eq("id", self.canvas.session_id).execute()
+
+                print("✅ Dados apagados do Supabase.")
+            except Exception as e:
+                print("❌ Erro ao deletar dados:", e)
             logout()
             self.close()
+            # Para voltar à tela de login, precisaríamos de uma lógica diferente
+            # no run.py ou em um gerenciador de janelas.
+        else:
+            QMessageBox.warning(self, "Erro de Logout", "Não foi possível deslogar.")
+
+
+    # def handle_collab(self):
+    #     # Lógica para o botão Colaborar (ex: mostrar lista de usuários, convidar)
+    #     print("Botão Colaborar clicado - funcionalidade a implementar.")
+    #     QMessageBox.information(self, "Colaborar", "Funcionalidade de colaboração ainda não implementada.")
+
+    def closeEvent(self, event):
+        # Aqui você pode chamar métodos de limpeza, como limpar formas ou deletar do Supabase
+        supabase = get_supabase_client()
+        if hasattr(self, "canvas") and self.canvas:
+            self.canvas.limpar_dados()
+        supabase.table("whiteboard_sessions").delete().eq("name", self.canvas.session_id).execute()
+        event.accept()  # Aceita o fechamento da janela
 
     def delete_selected_shape(self):
         if self.canvas.selected_shape_index is not None:

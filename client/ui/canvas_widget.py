@@ -36,8 +36,8 @@ class CanvasWidget(QWidget):
         supabase = get_supabase_client()
         try:
             supabase.table("whiteboard_sessions").insert({
-                "id": self.session_id,
-                "name": "Sessão automática via PySide"
+                "id": self.user_id,
+                "name": self.session_id
             }).execute()
             print("✅ Sessão registrada no Supabase.")
         except Exception as e:

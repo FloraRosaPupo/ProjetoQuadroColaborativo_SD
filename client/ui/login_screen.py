@@ -300,7 +300,7 @@ class LoginScreen(QWidget):
         if auth.login(email, password):
             current_user = auth.get_current_user()
             if current_user:
-                self.main_window = MainWindow(user_id=current_user.id)
+                self.main_window = MainWindow(user_id=current_user.id, email=email)
                 self.main_window.show()
                 self.close()
             else:

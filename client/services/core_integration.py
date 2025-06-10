@@ -3,28 +3,10 @@
 
 from client.services.supabase_client import get_supabase_client
 # list_sessions já foi corrigido para usar a tabela correta
-from client.services.session_manager import list_sessions
 from PySide6.QtWidgets import QMessageBox
 
 # Define o nome correto da tabela
 SHAPES_TABLE = "whiteboard_shapes"
-
-def get_all_sessions_info():
-    """Retorna informações sobre todas as sessões existentes.
-
-    Esta função busca no banco de dados (via session_manager) e retorna
-    uma lista de dicionários, cada um representando uma sessão.
-    Formato esperado pelo Core: Lista de {id, name, created_at, amount_users}.
-    """
-    print("Core Integration: Buscando informações de todas as sessões...")
-    try:
-        # list_sessions já usa a tabela correta e retorna as colunas disponíveis
-        sessions = list_sessions()
-        # print(f"Core Integration: {len(sessions)} sessões encontradas.")
-        return sessions
-    except Exception as e:
-        print(f"Core Integration: Erro ao buscar sessões: {e}")
-        return {"error": f"Erro ao buscar sessões: {e}"}
 
 def get_active_users_count(session_id):
     """Estima ou retorna a contagem de usuários ativos em uma sessão.
