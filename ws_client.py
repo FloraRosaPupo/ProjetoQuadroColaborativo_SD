@@ -5,7 +5,7 @@ import threading
 import json
 import time
 
-WS_URL = "wss://whiteboard-core-oxk7.onrender.com"
+WS_URL = "wss://whiteboard-core.onrender.com"
 
 def send_data(ws):
     supabase = get_supabase_client()

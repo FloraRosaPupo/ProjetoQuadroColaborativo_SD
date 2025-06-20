@@ -7,6 +7,8 @@ from PySide6.QtCore import Qt, QPointF, QRectF, QTimer
 from client.services.supabase_client import get_supabase_client
 from client.services.auth import logout, get_current_user
 import uuid
+import socketio
+import threading
 
 class CanvasWidget(QWidget):
     HANDLE_SIZE = 10
@@ -31,6 +33,10 @@ class CanvasWidget(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.carregar_formas_do_supabase)
         self.timer.start(1000)
+
+        # --- Socket.IO para colaboração em tempo real ---
+        self.sio = socketio.Client()
+        self._setup_socketio()
         
     def session_client(self):
         supabase = get_supabase_client()
@@ -357,5 +363,44 @@ class CanvasWidget(QWidget):
                 print("⚠ Nenhuma forma encontrada.")
         except Exception as e:
             print("❌ Erro ao carregar formas:", e)
+
+    def _setup_socketio(self):
+        @self.sio.event
+        def connect():
+            print("[SocketIO] Conectado ao servidor.")
+
+        @self.sio.event
+        def disconnect():
+            print("[SocketIO] Desconectado do servidor.")
+
+        @self.sio.on('shape_created')
+        def on_shape_created(data):
+            self.shapes.append(data)
+            self.update()
+
+        @self.sio.on('shape_updated')
+        def on_shape_updated(data):
+            for shape in self.shapes:
+                if shape.get('id') == data.get('id'):
+                    shape.update(data)
+                    break
+            self.update()
+
+        @self.sio.on('shape_deleted')
+        def on_shape_deleted(data):
+            self.shapes = [s for s in self.shapes if s.get('id') != data.get('id')]
+            self.update()
+
+        @self.sio.on('canvas_cleared')
+        def on_canvas_cleared(data=None):
+            self.shapes = []
+            self.update()
+
+        def connect_socket():
+            try:
+                self.sio.connect('http://192.168.100.12:5000', transports=['websocket'])
+            except Exception as e:
+                print("[SocketIO] Falha ao conectar:", e)
+        threading.Thread(target=connect_socket, daemon=True).start()
 
     

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Quadro Branco Colaborativo{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="text-center mb-4">
+        <h1 style="font-size: 28px; font-weight: bold; color: #222; letter-spacing: 1px; margin-bottom: 30px;">
+            Quadro Branco Colaborativo
+        </h1>
+    </div>
+    
+    <div class="card" style="max-width: 400px; margin: 0 auto;">
+        <h2 class="text-center mb-4" style="font-size: 24px; font-weight: bold; color: #222;">
+            Entrar
+        </h2>
+        
+        <form method="POST" action="{{ url_for('login_route') }}">
+            <div class="form-group">
+                <input type="email" name="email" class="form-control" placeholder="Seu email" required>
+            </div>
+            
+            <div class="form-group">
+                <input type="password" name="password" class="form-control" placeholder="Sua senha" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+                Entrar
+            </button>
+        </form>
+        
+        <div class="text-center mt-4">
+            <a href="{{ url_for('register_route') }}" class="btn btn-secondary" style="background: transparent; color: #6366F1; text-decoration: underline; border: none;">
+                Não tem uma conta? Cadastrar
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %} 
