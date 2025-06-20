@@ -3,9 +3,9 @@ services:
   - type: redis
     name: redis
     plan: free
-    ipAllowList:  # Regra para permitir conexões
-      - cidr: 0.0.0.0/0
-        description: "Allow all"
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: "Allow all connections"
 
   # 2. Aplicação Web (Flask/gRPC)
   - type: web
@@ -18,11 +18,10 @@ services:
         value: 1
       - key: FLASK_ENV
         value: production
-      # O Render injeta a URL do serviço Redis automaticamente
       - key: REDIS_URL
         fromService:
           type: redis
           name: redis
           property: connectionString
-      # As variáveis a seguir devem ser adicionadas na aba "Environment" do dashboard do Render
-      # SUPABASE_URL, SUPABASE_API_KEY, FLASK_SECRET_KEY
+      # Lembre-se de adicionar as variáveis SUPABASE_URL, SUPABASE_API_KEY, 
+      # e FLASK_SECRET_KEY no dashboard da Render na aba "Environment".
