@@ -11,8 +11,7 @@ services:
     name: whiteboard-app
     plan: free # Plano gratuito do Render (pode hibernar após inatividade)
     runtime: docker
-    healthCheck:
-      path: /health # Endpoint para verificar se a aplicação está saudável
+    healthCheckPath: /health
     envVars:
       - key: PYTHONUNBUFFERED # Garante que os logs do Python apareçam em tempo real
         value: 1
