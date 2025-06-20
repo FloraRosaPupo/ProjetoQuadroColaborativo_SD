@@ -1,0 +1,534 @@
+{% extends "base.html" %}
+
+{% block title %}Quadro Branco Colaborativo{% endblock %}
+
+{% block extra_css %}
+<style>
+    .whiteboard-container {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background-color: #F3F4F6;
+    }
+
+    .top-bar {
+        background: white;
+        padding: 15px 30px;
+        border-bottom: 1px solid #E5E7EB;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        font-size: 14px;
+        color: #222;
+    }
+
+    .toolbar {
+        background: white;
+        padding: 20px 30px;
+        border-bottom: 1px solid #E5E7EB;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .tool-button {
+        padding: 10px 20px;
+        border: 1.5px solid #D1D5DB;
+        border-radius: 8px;
+        background: white;
+        color: #1F2937;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .tool-button:hover {
+        background: #F0F7FF;
+        border-color: #4F46E5;
+    }
+
+    .tool-button.active {
+        background: #4F46E5;
+        color: white;
+        border-color: #4F46E5;
+    }
+
+    .color-picker {
+        width: 40px;
+        height: 40px;
+        border: 1.5px solid #D1D5DB;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .text-input {
+        padding: 10px;
+        border: 1.5px solid #D1D5DB;
+        border-radius: 8px;
+        font-size: 15px;
+        background: white;
+        color: #1F2937;
+        min-width: 200px;
+    }
+
+    .text-input:focus {
+        outline: none;
+        border-color: #4F46E5;
+        background: #F0F7FF;
+    }
+
+    .canvas-container {
+        flex: 1;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    #whiteboard-canvas {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        cursor: crosshair;
+    }
+
+    .shape {
+        position: absolute;
+        cursor: move;
+    }
+
+    .shape.selected {
+        outline: 2px solid #4F46E5;
+    }
+
+    .resize-handle {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: #4F46E5;
+        border: 1px solid white;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    .resize-handle.tl { top: -5px; left: -5px; }
+    .resize-handle.tr { top: -5px; right: -5px; }
+    .resize-handle.bl { bottom: -5px; left: -5px; }
+    .resize-handle.br { bottom: -5px; right: -5px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="whiteboard-container">
+    <!-- Barra superior -->
+    <div class="top-bar">
+        <div class="user-info">
+            <span>Usuário: {{ session.email }}</span>
+            <span id="user-count">Pessoas na sessão: 0</span>
+        </div>
+        <a href="{{ url_for('logout_route') }}" class="btn btn-secondary">Sair</a>
+    </div>
+
+    <!-- Barra de ferramentas -->
+    <div class="toolbar">
+        <button class="tool-button active" data-mode="square">Quadrado</button>
+        <button class="tool-button" data-mode="circle">Círculo</button>
+        <button class="tool-button" data-mode="triangle">Triângulo</button>
+        <button class="tool-button" data-mode="text">Texto</button>
+        
+        <span style="margin-left: 20px; font-weight: 500;">Cor:</span>
+        <input type="color" id="color-picker" class="color-picker" value="#000000">
+        
+        <input type="text" id="text-input" class="text-input" placeholder="Digite o texto..." style="display: none;">
+        
+        <button class="btn btn-danger" onclick="clearCanvas()">Limpar</button>
+        <button class="btn btn-secondary" onclick="deleteSelected()" id="delete-btn" disabled>Excluir</button>
+    </div>
+
+    <!-- Container do canvas -->
+    <div class="canvas-container">
+        <canvas id="whiteboard-canvas" width="1200" height="600"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Configurações do canvas
+    const canvas = document.getElementById('whiteboard-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Estado da aplicação
+    let currentMode = 'square';
+    let currentColor = '#000000';
+    let currentText = '';
+    let shapes = [];
+    let selectedShapeIndex = -1;
+    let isDragging = false;
+    let isResizing = false;
+    let dragOffset = { x: 0, y: 0 };
+    let resizeHandle = null;
+    
+    // Socket.IO
+    const socket = io();
+    
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', function() {
+        loadShapes();
+        setupEventListeners();
+        updateUserCount();
+        
+        // Atualizar contagem de usuários a cada 10 segundos
+        setInterval(updateUserCount, 10000);
+    });
+    
+    // Configurar event listeners
+    function setupEventListeners() {
+        // Botões de modo
+        document.querySelectorAll('.tool-button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tool-button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentMode = this.dataset.mode;
+                
+                // Mostrar/ocultar input de texto
+                const textInput = document.getElementById('text-input');
+                textInput.style.display = currentMode === 'text' ? 'inline-block' : 'none';
+            });
+        });
+        
+        // Seletor de cor
+        document.getElementById('color-picker').addEventListener('change', function() {
+            currentColor = this.value;
+        });
+        
+        // Input de texto
+        document.getElementById('text-input').addEventListener('input', function() {
+            currentText = this.value;
+        });
+        
+        // Eventos do canvas
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('click', handleCanvasClick);
+    }
+    
+    // Carregar formas do servidor
+    async function loadShapes() {
+        try {
+            const response = await fetch('/api/shapes');
+            const data = await response.json();
+            shapes = data;
+            drawCanvas();
+        } catch (error) {
+            console.error('Erro ao carregar formas:', error);
+        }
+    }
+    
+    // Desenhar canvas
+    function drawCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        shapes.forEach((shape, index) => {
+            drawShape(shape, index === selectedShapeIndex);
+        });
+    }
+    
+    // Desenhar uma forma
+    function drawShape(shape, isSelected = false) {
+        ctx.save();
+        ctx.fillStyle = shape.color;
+        ctx.strokeStyle = isSelected ? '#4F46E5' : shape.color;
+        ctx.lineWidth = isSelected ? 2 : 1;
+        
+        const x = shape.x;
+        const y = shape.y;
+        const width = shape.width || 40;
+        const height = shape.height || 40;
+        
+        switch (shape.type) {
+            case 'square':
+                ctx.fillRect(x - width/2, y - height/2, width, height);
+                if (isSelected) {
+                    ctx.strokeRect(x - width/2, y - height/2, width, height);
+                }
+                break;
+                
+            case 'circle':
+                ctx.beginPath();
+                ctx.arc(x, y, width/2, 0, 2 * Math.PI);
+                ctx.fill();
+                if (isSelected) {
+                    ctx.stroke();
+                }
+                break;
+                
+            case 'triangle':
+                ctx.beginPath();
+                ctx.moveTo(x, y - height/2);
+                ctx.lineTo(x - width/2, y + height/2);
+                ctx.lineTo(x + width/2, y + height/2);
+                ctx.closePath();
+                ctx.fill();
+                if (isSelected) {
+                    ctx.stroke();
+                }
+                break;
+                
+            case 'text':
+                ctx.font = `${shape.font_size || 14}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(shape.text || 'Texto', x, y);
+                if (isSelected) {
+                    ctx.strokeText(shape.text || 'Texto', x, y);
+                }
+                break;
+        }
+        
+        ctx.restore();
+    }
+    
+    // Manipular clique do mouse
+    function handleMouseDown(e) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        // Verificar se clicou em uma forma existente
+        const clickedIndex = getShapeAtPosition(x, y);
+        if (clickedIndex !== -1) {
+            selectedShapeIndex = clickedIndex;
+            isDragging = true;
+            dragOffset = {
+                x: x - shapes[clickedIndex].x,
+                y: y - shapes[clickedIndex].y
+            };
+            updateDeleteButton();
+            drawCanvas();
+            return;
+        }
+        
+        // Criar nova forma
+        if (currentMode === 'text' && !currentText.trim()) {
+            return; // Não criar texto vazio
+        }
+        
+        const newShape = {
+            type: currentMode,
+            x: x,
+            y: y,
+            width: 40,
+            height: 40,
+            color: currentColor,
+            text: currentMode === 'text' ? currentText : null,
+            font_size: 14
+        };
+        
+        createShape(newShape);
+    }
+    
+    // Manipular movimento do mouse
+    function handleMouseMove(e) {
+        if (!isDragging) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        shapes[selectedShapeIndex].x = x - dragOffset.x;
+        shapes[selectedShapeIndex].y = y - dragOffset.y;
+        
+        drawCanvas();
+    }
+    
+    // Manipular soltura do mouse
+    function handleMouseUp(e) {
+        if (isDragging) {
+            updateShape(shapes[selectedShapeIndex]);
+            isDragging = false;
+        }
+    }
+    
+    // Manipular clique no canvas
+    function handleCanvasClick(e) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const clickedIndex = getShapeAtPosition(x, y);
+        if (clickedIndex !== -1) {
+            selectedShapeIndex = clickedIndex;
+            updateDeleteButton();
+        } else {
+            selectedShapeIndex = -1;
+            updateDeleteButton();
+        }
+        drawCanvas();
+    }
+    
+    // Verificar se uma posição está dentro de uma forma
+    function getShapeAtPosition(x, y) {
+        for (let i = shapes.length - 1; i >= 0; i--) {
+            const shape = shapes[i];
+            const width = shape.width || 40;
+            const height = shape.height || 40;
+            
+            if (x >= shape.x - width/2 && x <= shape.x + width/2 &&
+                y >= shape.y - height/2 && y <= shape.y + height/2) {
+                return i;
+            }
+        }
+        return -1;
+    }
+    
+    // Criar forma no servidor
+    async function createShape(shapeData) {
+        try {
+            const response = await fetch('/api/shapes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(shapeData)
+            });
+            
+            const newShape = await response.json();
+            shapes.push(newShape);
+            drawCanvas();
+        } catch (error) {
+            console.error('Erro ao criar forma:', error);
+        }
+    }
+    
+    // Atualizar forma no servidor
+    async function updateShape(shapeData) {
+        try {
+            const response = await fetch(`/api/shapes/${shapeData.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(shapeData)
+            });
+            if (response.status === 409) {
+                const data = await response.json();
+                alert('Conflito: a forma foi atualizada por outro usuário. Recarregue o quadro.');
+                // Opcional: recarregar formas do servidor
+                loadShapes();
+                return;
+            }
+            // Incrementar versão localmente
+            shapeData.version = (shapeData.version || 0) + 1;
+        } catch (error) {
+            console.error('Erro ao atualizar forma:', error);
+        }
+    }
+    
+    // Deletar forma selecionada
+    async function deleteSelected() {
+        if (selectedShapeIndex === -1) return;
+        
+        const shape = shapes[selectedShapeIndex];
+        try {
+            await fetch(`/api/shapes/${shape.id}`, {
+                method: 'DELETE'
+            });
+            
+            shapes.splice(selectedShapeIndex, 1);
+            selectedShapeIndex = -1;
+            updateDeleteButton();
+            drawCanvas();
+        } catch (error) {
+            console.error('Erro ao deletar forma:', error);
+        }
+    }
+    
+    // Limpar canvas
+    async function clearCanvas() {
+        if (!confirm('Tem certeza que deseja limpar todo o quadro?')) return;
+        
+        try {
+            await fetch('/api/clear', {
+                method: 'POST'
+            });
+            
+            shapes = [];
+            selectedShapeIndex = -1;
+            updateDeleteButton();
+            drawCanvas();
+        } catch (error) {
+            console.error('Erro ao limpar canvas:', error);
+        }
+    }
+    
+    // Atualizar botão de deletar
+    function updateDeleteButton() {
+        const deleteBtn = document.getElementById('delete-btn');
+        deleteBtn.disabled = selectedShapeIndex === -1;
+    }
+    
+    // Atualizar contagem de usuários
+    async function updateUserCount() {
+        try {
+            const response = await fetch('/api/users/count');
+            const data = await response.json();
+            document.getElementById('user-count').textContent = `Pessoas na sessão: ${data.count}`;
+        } catch (error) {
+            console.error('Erro ao atualizar contagem de usuários:', error);
+        }
+    }
+    
+    // Eventos Socket.IO
+    socket.on('shape_created', function(shape) {
+        shapes.push(shape);
+        drawCanvas();
+    });
+    
+    socket.on('shape_updated', function(updateData) {
+        const index = shapes.findIndex(s => s.id === updateData.id);
+        if (index !== -1) {
+            Object.assign(shapes[index], updateData);
+            drawCanvas();
+        }
+    });
+    
+    socket.on('shape_deleted', function(data) {
+        const index = shapes.findIndex(s => s.id === data.id);
+        if (index !== -1) {
+            shapes.splice(index, 1);
+            if (selectedShapeIndex === index) {
+                selectedShapeIndex = -1;
+                updateDeleteButton();
+            }
+            drawCanvas();
+        }
+    });
+    
+    socket.on('canvas_cleared', function() {
+        shapes = [];
+        selectedShapeIndex = -1;
+        updateDeleteButton();
+        drawCanvas();
+    });
+    
+    socket.on('user_joined', function(data) {
+        console.log('Usuário entrou:', data);
+        updateUserCount();
+    });
+    
+    socket.on('user_left', function(data) {
+        console.log('Usuário saiu:', data);
+        updateUserCount();
+    });
+</script>
+{% endblock %} 

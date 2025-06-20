@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+service ShapeService {
+  rpc CreateShape (Shape) returns (ShapeResponse);
+  rpc UpdateShape (Shape) returns (ShapeResponse);
+  rpc DeleteShape (ShapeId) returns (ShapeResponse);
+}
+
+message Shape {
+  string id = 1;
+  string type = 2;
+  double x = 3;
+  double y = 4;
+  double width = 5;
+  double height = 6;
+  string color = 7;
+  string text = 8;
+  int32 font_size = 9;
+  int32 version = 10;
+  string session_id = 11;
+}
+
+message ShapeId {
+  string id = 1;
+  string session_id = 2;
+}
+
+message ShapeResponse {
+  bool success = 1;
+  string message = 2;
+  Shape shape = 3;
+} 

@@ -2,7 +2,6 @@
 """Módulo de autenticação usando Supabase."""
 
 from client.services.supabase_client import get_supabase_client
-from PySide6.QtWidgets import QMessageBox
 
 # Variável global para armazenar informações do usuário logado
 current_user = None
@@ -22,11 +21,6 @@ def login(email, password):
             return False
     except Exception as e:
         print(f"Erro durante o login Supabase para {email}: {e}")
-        error_message = str(e)
-        if "Invalid login credentials" in error_message:
-            QMessageBox.warning(None, "Erro de Login", "Email ou senha inválidos.")
-        else:
-            QMessageBox.critical(None, "Erro de Login", f"Ocorreu um erro inesperado: {error_message}")
         return False
 
 def signup(email, password):
@@ -36,20 +30,15 @@ def signup(email, password):
         response = supabase.auth.sign_up({"email": email, "password": password})
         if response.user:
             print(f"Usuário {email} registrado com sucesso. Verifique seu email para confirmação.")
-            QMessageBox.information(None, "Registro Concluído",
-                                    "Registro realizado com sucesso! Verifique seu email para confirmar a conta antes de fazer login.")
             return True
         elif response.error:
              print(f"Falha no registro para {email}: {response.error.message}")
-             QMessageBox.warning(None, "Erro de Registro", f"Não foi possível registrar: {response.error.message}")
              return False
         else:
             print(f"Falha no registro para {email}: Resposta inesperada do Supabase.")
-            QMessageBox.warning(None, "Erro de Registro", "Ocorreu um erro inesperado durante o registro.")
             return False
     except Exception as e:
         print(f"Erro durante o signup Supabase para {email}: {e}")
-        QMessageBox.critical(None, "Erro de Registro", f"Ocorreu um erro inesperado: {e}")
         return False
 
 def get_current_user():
