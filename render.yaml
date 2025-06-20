@@ -1,19 +1,20 @@
 services:
   # 1. Serviço Redis
-  # Render irá criar e gerenciar uma instância Redis gratuita para nós.
   - type: redis
     name: redis
-    plan: free # Plano gratuito do Render
+    plan: free
+    ipAllowList:  # Regra para permitir conexões
+      - cidr: 0.0.0.0/0
+        description: "Allow all"
 
   # 2. Aplicação Web (Flask/gRPC)
-  # Render irá construir a imagem a partir do nosso Dockerfile e executar.
   - type: web
     name: whiteboard-app
-    plan: free # Plano gratuito do Render (pode hibernar após inatividade)
+    plan: free
     runtime: docker
     healthCheckPath: /health
     envVars:
-      - key: PYTHONUNBUFFERED # Garante que os logs do Python apareçam em tempo real
+      - key: PYTHONUNBUFFERED
         value: 1
       - key: FLASK_ENV
         value: production
@@ -23,10 +24,5 @@ services:
           type: redis
           name: redis
           property: connectionString
-      # As chaves a seguir devem ser adicionadas como "Secret Files" no dashboard do Render
-      - key: SUPABASE_URL
-        fromSecret: true
-      - key: SUPABASE_API_KEY
-        fromSecret: true
-      - key: FLASK_SECRET_KEY
-        fromSecret: true 
+      # As variáveis a seguir devem ser adicionadas na aba "Environment" do dashboard do Render
+      # SUPABASE_URL, SUPABASE_API_KEY, FLASK_SECRET_KEY
