@@ -1,2 +1,4 @@
-SUPABASE_URL = "https://igtwulxvnbukoojlrbao.supabase.co"
-SUPABASE_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlndHd1bHh2bmJ1a29vamxyYmFvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDU5MTI2NSwiZXhwIjoyMDYwMTY3MjY1fQ.BEjxPUlvYa4ilWMVd5z9yxFjQy8T6r12IFMKgZo-fIw"
+"""Configuração local; nunca utilize service_role em um cliente desktop."""
+import os
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_API_KEY = os.environ.get("SUPABASE_KEY", "")
