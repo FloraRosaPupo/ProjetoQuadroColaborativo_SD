@@ -3,7 +3,9 @@
 Projeto acadêmico de Sistemas Distribuídos (UFV–Rio Paranaíba, 2025/1): interface desktop para autenticação, sessões e desenho compartilhado.
 
 ## Stack e organização
-Python, PySide6, Supabase e websocket-client. `client/ui/` contém a interface; `client/services/`, integrações e regras; `ws_client.py`, envio de métricas; `run.py`, inicialização.
+Python, PySide6, Supabase e websocket-client.
+
+Mantida a separação entre `client/ui`, `client/services` e o worker de comunicação. É uma aplicação desktop coesa; criar camadas de MVVM vazias não melhora essa fronteira. O cliente Supabase é carregado sob demanda e a integração aceita substituição nos testes.
 
 ## Executar
 Requer Python 3.11+ e um projeto Supabase com o esquema e as políticas de acesso correspondentes à aplicação.
@@ -33,3 +35,17 @@ Uma chave privilegiada estava presente em `config/settings.py`: ela foi removida
 
 ## Licença
 Não há licença de distribuição definida neste repositório.
+
+
+## Funcionalidades
+
+- Autenticação.
+- desenho compartilhado.
+- envio de métricas de sessões.
+
+
+## Organização e manutenção
+
+Mantida a separação entre `client/ui`, `client/services` e o worker de comunicação. É uma aplicação desktop coesa; criar camadas de MVVM vazias não melhora essa fronteira. O cliente Supabase é carregado sob demanda e a integração aceita substituição nos testes.
+
+Veja [a revisão de desenvolvimento](docs/REVISAO.md) para decisões, testes e limites, e [o guia de contribuição](CONTRIBUTING.md) para o fluxo de manutenção.
