@@ -1,14 +1,15 @@
-from client.ui.login_screen import LoginScreen
-from PySide6.QtWidgets import QApplication
 import sys
-
-from ws_client import start_ws_client  # 👈 adiciona essa linha aqui
+from PySide6.QtWidgets import QApplication
+from client.ui.login_screen import LoginScreen
+from ws_client import start_ws_client
 
 if __name__ == "__main__":
-    start_ws_client()  # 👈 e chama aqui antes de abrir a interface
-
     app = QApplication(sys.argv)
+    worker = start_ws_client()
+    app.aboutToQuit.connect(worker.stop)
     login = LoginScreen()
     login.show()
-    sys.exit(app.exec())
-
+    try:
+        sys.exit(app.exec())
+    finally:
+        worker.stop()
