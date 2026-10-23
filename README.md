@@ -39,6 +39,8 @@ python run.py
 
 Antes de executar, defina `SUPABASE_URL` e `SUPABASE_KEY` no ambiente do terminal. `.env.example` documenta os nomes; o programa não carrega `.env` automaticamente. `WHITEBOARD_WS_URL` permite trocar o servidor de métricas. Use somente chave pública anon/publishable no cliente e configure RLS no Supabase.
 
+O cliente rejeita chaves `service_role`, `sb_secret_` e formatos não reconhecidos antes de chamar o SDK. Aceita uma chave pública `sb_publishable_` ou um JWT legado com papel `anon`; a autenticidade da chave continua sendo verificada pelo Supabase. Essa proteção não revoga a chave antiga nem substitui as políticas RLS do servidor.
+
 ## Testes
 ```sh
 python -m unittest discover -s tests -v
